@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>POS</title>
+
+<meta name="description" content="POS ระบบขายหน้าร้าน">
+<meta name="theme-color" content="#0b1220">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+
+<!-- Favicon แบบ emoji -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    height: 100dvh;              /* กัน address bar บนมือถือบัง */
+    overflow: hidden;            /* ไม่มี scrollbar */
+    background: #ffffff;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  /* กรอบครอบ iframe: ตัดส่วนเกิน (แถบ Google) ทิ้ง */
+  #frameWrap {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    border: 0;
+  }
+
+  /* สูงเกินจอ ~40px เพื่อดันแถบ "สร้างโดยผู้ใช้ Google Apps Script" ให้ตกขอบล่าง */
+  #appFrame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% + 40px);
+    height: calc(100dvh + 40px);
+    border: 0;
+    display: block;
+    background: #ffffff;
+  }
+
+  /* ---------- Loading screen ---------- */
+  #loader {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: linear-gradient(160deg, #0b1220 0%, #1b2440 100%);
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity .45s ease;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #loader.hide { opacity: 0; pointer-events: none; }
+
+  .pos-icon {
+    font-size: 42px;
+    line-height: 1;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 3px solid rgba(255, 255, 255, .18);
+    border-top-color: #e4002b;   /* สีแบรนด์ */
+    border-radius: 50%;
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-title {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Sarabun",
+                 "Noto Sans Thai", Roboto, sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: .3px;
+    text-align: center;
+  }
+  .loader-sub {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Sarabun",
+                 "Noto Sans Thai", Roboto, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, .62);
+    letter-spacing: .2px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Loading screen -->
+  <div id="loader">
+    <div class="pos-icon">🛒</div>
+    <div class="spinner"></div>
+    <div class="loader-title">POS</div>
+    <div class="loader-sub">กำลังโหลดระบบขายหน้าร้าน…</div>
+  </div>
+
+  <!-- App -->
+  <div id="frameWrap">
+    <iframe
+      id="appFrame"
+      title="POS"
+      allow="fullscreen; clipboard-read; clipboard-write; camera; geolocation"
+      allowfullscreen
+      referrerpolicy="no-referrer"
+      scrolling="no"
+      frameborder="0"></iframe>
+  </div>
+
+<script>
+  (function () {
+    var TARGET_URL = "https://script.google.com/macros/s/AKfycbwqIRhwm4r0sCthv8Ih5Hv7913EzpHwGZqYCe6G6MidPRxoGJznrs_hctwGdqN7SvuT/exec";
+    
+    var loader = document.getElementById('loader');
+    var wrap   = document.getElementById('frameWrap');
+    var frame  = document.getElementById('appFrame');
+    var OVERLAP = 40;
+    var done = false;
+
+    function hideLoader() {
+      if (done) return;
+      done = true;
+      loader.classList.add('hide');
+      setTimeout(function () { loader.style.display = 'none'; }, 500);
+    }
+
+    // กำหนด URL ผ่าน JS เพื่อเลี่ยงปัญหาการบล็อกจังหวะเรนเดอร์แรก
+    window.addEventListener('DOMContentLoaded', function() {
+      frame.src = TARGET_URL;
+    });
+
+    frame.addEventListener('load', function () {
+      setTimeout(hideLoader, 400);
+    });
+
+    setTimeout(hideLoader, 15000);   // ซ่อน loader อัตโนมัติใน 15 วินาที
+
+    // ปรับความสูงป้องกันจอล้นบนมือถือ
+    function fixHeight() {
+      var h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+      wrap.style.height  = h + 'px';
+      frame.style.height = (h + OVERLAP) + 'px';
+    }
+    window.addEventListener('resize', fixHeight);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', fixHeight);
+    window.addEventListener('orientationchange', function () { setTimeout(fixHeight, 300); });
+    fixHeight();
+
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  })();
+</script>
+</body>
+</html>
